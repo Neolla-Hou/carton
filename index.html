@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>纸箱报价核算系统</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:"Microsoft YaHei",Arial,sans-serif; background:#eef1f5; padding:14px; color:#333; font-size:13px; }
+.wrap { max-width:1100px; margin:0 auto; }
+h1 { text-align:center; color:#1a5276; font-size:19px; margin-bottom:2px; }
+.sub { text-align:center; color:#999; font-size:11px; margin-bottom:12px; }
+.card { background:#fff; border-radius:8px; padding:13px 15px; margin-bottom:12px; box-shadow:0 1px 5px rgba(0,0,0,0.06); }
+.card h2 { font-size:14px; color:#2c3e50; margin-bottom:9px; border-left:4px solid #3498db; padding-left:8px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; }
+.fld p { font-size:11px; color:#777; margin-bottom:2px; }
+input,select,button { padding:7px 9px; border:1px solid #d0d7de; border-radius:5px; font-size:13px; width:100%; }
+input:focus,select:focus { outline:none; border-color:#3498db; box-shadow:0 0 0 2px rgba(52,152,219,0.15); }
+button { background:#3498db; color:#fff; border:none; cursor:pointer; font-weight:bold; }
+button:hover { background:#2980b9; }
+button.small { padding:5px 9px; font-size:12px; }
+button.success { background:#27ae60; } button.danger { background:#e74c3c; } button.orange { background:#f39c12; }
+table { width:100%; border-collapse:collapse; font-size:12.5px; }
+th { background:#eef2f5; padding:7px 4px; text-align:center; font-weight:bold; }
+td { padding:5px; text-align:center; border-bottom:1px solid #f2f2f2; }
+input.t { padding:4px 5px; font-size:12.5px; }
+.opt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:7px; }
+.opt-item { display:flex; align-items:center; gap:6px; background:#f7f9fb; padding:7px 9px; border-radius:6px; }
+.opt-item input[type=checkbox] { width:auto; cursor:pointer; }
+.opt-item input[type=number] { flex:1; min-width:0; }
+.opt-item span { font-size:12px; white-space:nowrap; }
+.opt-item small { color:#999; font-size:10px; }
+.result-row { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px; }
+.result-box { flex:1; min-width:140px; padding:11px 12px; border-radius:8px; color:#fff; text-align:center; }
+.result-box .lab { font-size:11px; opacity:0.9; }
+.result-box .val { font-size:21px; font-weight:bold; margin-top:3px; }
+.r1 { background:linear-gradient(135deg,#11998e,#38ef7d); }
+.r2 { background:linear-gradient(135deg,#667eea,#764ba2); }
+.r3 { background:linear-gradient(135deg,#f7971e,#ffd200); color:#333; }
+.r4 { background:linear-gradient(135deg,#eb3349,#f45c43); }
+.note { background:#fff3cd; padding:7px 11px; border-radius:5px; font-size:12px; color:#856404; margin-bottom:9px; }
+.note b { font-family:Consolas,monospace; }
+@media(max-width:768px){ .grid{grid-template-columns:1fr 1fr;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>📦 纸箱报价核算系统</h1>
+<p class="sub">凉山州绿色启航 · 数据自动保存 · 输入即存、改即算</p>
+
+<!-- ① 箱型与纸板尺寸 -->
+<div class="card">
+<h2>① 箱型与纸板尺寸</h2>
+<div class="grid">
+<div class="fld"><p>箱型</p>
+<select id="boxType" onchange="calc()">
+<option value="duikou">对口箱</option>
+<option value="yixing">异形箱</option>
+</select></div>
+<div class="fld"><p>长 (mm)</p><input type="number" id="boxL" value="400" onchange="calc()"></div>
+<div class="fld"><p>宽 (mm)</p><input type="number" id="boxW" value="258" onchange="calc()"></div>
+<div class="fld"><p>高 (mm)</p><input type="number" id="boxH" value="260" onchange="calc()"></div>
+<div class="fld"><p>门幅 (mm)</p><input type="number" id="doorW" value="2200" onchange="calc()"></div>
+<div class="fld"><p>开数</p><input type="number" id="cutN" value="2" onchange="calc()"></div>
+<div class="fld"><p>修边损耗 (%)</p><input type="number" id="trim" value="3" step="0.5" onchange="calc()"></div>
+</div>
+<div class="note" style="margin-top:9px;">
+📐 面积算法：<b>[(长+宽)×2 + 接头] × [(宽+高) + 搭接] ÷ 10⁶</b> &nbsp;|&nbsp; 默认接头31mm，搭接2mm
+</div>
+<div class="grid">
+<div class="fld"><p>接头系数 (mm)</p><input type="number" id="joint" value="31" onchange="calc()"></div>
+<div class="fld"><p>搭接系数 (mm)</p><input type="number" id="lap" value="2" onchange="calc()"></div>
+</div>
+</div>
+
+<!-- ② 纸张配置 -->
+<div class="card">
+<h2>② 纸张配置（面纸/瓦纸/芯纸/里纸）</h2>
+<table>
+<thead>
+<tr><th>层</th><th>名称</th><th>克重(g/m²)</th><th>瓦楞系数</th><th>纸价(元/吨)</th><th>平方克重(g)</th><th>平方纸价(元)</th><th>操作</th></tr>
+</thead>
+<tbody id="layerTbody"></tbody>
+</table>
+<div style="margin-top:9px; display:flex; gap:7px; flex-wrap:wrap;">
+<button class="small" onclick="addLayer()">+ 加一层</button>
+<button class="small" onclick="removeLayer()">- 删一层</button>
+<button class="small orange" onclick="loadTpl('7')">七层</button>
+<button class="small orange" onclick="loadTpl('5')">五层</button>
+<button class="small orange" onclick="loadTpl('3')">三层</button>
+<button class="small success" onclick="saveTpl()">💾 存为模板</button>
+<button class="small" onclick="resetLayers()">🔄 重置</button>
+</div>
+</div>
+
+<!-- ③ 自动核算指标 -->
+<div class="card">
+<h2>③ 自动核算</h2>
+<div class="result-row">
+<div class="result-box r2"><div class="lab">纸箱面积 (m²)</div><div class="val" id="outArea">-</div></div>
+<div class="result-box r1"><div class="lab">修边面积 (m²)</div><div class="val" id="outTrim">-</div></div>
+<div class="result-box r2"><div class="lab">平方纸重 (g/m²)</div><div class="val" id="outGsm">-</div></div>
+<div class="result-box r3"><div class="lab">平方纸价 (元/m²)</div><div class="val" id="outPrice">-</div></div>
+</div>
+<div class="result-row">
+<div class="result-box r1"><div class="lab">纸箱纸价 (元/个)</div><div class="val" id="outPaperPrice">-</div></div>
+<div class="result-box r4"><div class="lab">纸箱箱重 (g)</div><div class="val" id="outWeight">-</div></div>
+</div>
+</div>
+
+<!-- ④ 加工工序 -->
+<div class="card">
+<h2>④ 加工工序费用（按面积核算：元/㎡）</h2>
+<div class="note">
+⚠️ 各工序单价按 <b>元/㎡</b> 填写，单箱加工费 = 各勾选项单价之和 × 修边面积
+</div>
+<div class="opt-grid" id="optGrid"></div>
+<div style="margin-top:10px; padding:10px 14px; background:#eef7ff; border-radius:6px; font-size:14px;">
+<div>加工费单价合计：<strong id="outProcessFee" style="color:#e74c3c; font-size:20px;">0</strong> 元/㎡</div>
+<div style="margin-top:5px; font-size:13px;">单箱加工费（×修边面积）：<strong id="outProcessFeeBox" style="color:#e67e22; font-size:16px;">0</strong> 元/个</div>
+</div>
+</div>
+
+<!-- ⑤ 最终报价 -->
+<div class="card">
+<h2>⑤ 最终报价</h2>
+<div class="result-row">
+<div class="result-box r1"><div class="lab">原纸成本</div><div class="val" id="rPaper">-</div></div>
+<div class="result-box r2"><div class="lab">加工费</div><div class="val" id="rProcess">-</div></div>
+<div class="result-box r3"><div class="lab">单箱成本</div><div class="val" id="rCost">-</div></div>
+<div class="result-box r4"><div class="lab">建议报价</div><div class="val" id="rQuote">-</div></div>
+</div>
+<div class="grid" style="margin-top:6px;">
+<div class="fld"><p>目标毛利率 (%)</p><input type="number" id="profitRate" value="20" step="1" onchange="calc()"></div>
+<div class="fld"><p>税费率 (%)</p><input type="number" id="taxRate" value="0" step="0.5" onchange="calc()"></div>
+<div class="fld"><p>运输/管理分摊 (元/个)</p><input type="number" id="otherFee" value="0" step="0.05" onchange="calc()"></div>
+</div>
+</div>
+
+<!-- ⑥ 订单存档 -->
+<div class="card">
+<h2>⑥ 报价单存档</h2>
+<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+<div class="fld" style="flex:1; min-width:200px;"><p>报价单名称/客户</p><input type="text" id="quoteName" placeholder="如：会东蓝莓基地纸箱"></div>
+<button class="success" onclick="saveQuote()">📌 保存此报价</button>
+<button onclick="exportQuote()">📤 导出文本</button>
+</div>
+<div id="quoteList" style="margin-top:10px;"></div>
+</div>
+
+<div style="text-align:center; margin:6px 0 24px;">
+<button class="danger" onclick="clearAll()">🗑️ 清空所有数据</button>
+</div>
+</div>
+
+<script>
+// ===== 数据 =====
+const DEFAULT_OPTS = [
+{name:'纸板线', price:0.55, on:true},
+{name:'碰线', price:0.15, on:true},
+{name:'钉箱', price:0.30, on:true},
+{name:'高速印刷', price:1.20, on:false},
+{name:'高清印刷', price:2.50, on:false},
+{name:'平压平模切', price:0.80, on:false},
+{name:'打包', price:0.25, on:false},
+{name:'覆膜', price:1.50, on:false},
+{name:'贴标', price:0.20, on:false},
+{name:'其他', price:0.00, on:false}
+];
+
+let layers=[], opts=[], quotes=[];
+
+function init() {
+  opts = JSON.parse(localStorage.getItem('quoteOpts')||'null') || JSON.parse(JSON.stringify(DEFAULT_OPTS));
+  loadLayers();
+  if(layers.length===0) resetLayers();
+  renderLayers(); renderOpts(); calc(); renderQuotes();
+}
+
+function default7() {
+  return [
+    {name:'面纸',gsm:150,flute:1.00,price:4200},
+    {name:'瓦纸1',gsm:100,flute:1.25,price:3800},
+    {name:'芯纸',gsm:80,flute:1.00,price:3500},
+    {name:'瓦纸2',gsm:140,flute:1.35,price:3800},
+    {name:'芯纸2',gsm:80,flute:1.00,price:3500},
+    {name:'瓦纸3',gsm:100,flute:1.25,price:3800},
+    {name:'里纸',gsm:120,flute:1.00,price:4100}
+  ];
+}
+function default5() {
+  return [
+    {name:'面纸',gsm:200,flute:1.00,price:4200},
+    {name:'瓦纸',gsm:120,flute:1.35,price:3800},
+    {name:'芯纸',gsm:90,flute:1.00,price:3500},
+    {name:'瓦纸2',gsm:120,flute:1.35,price:3800},
+    {name:'里纸',gsm:200,flute:1.00,price:4200}
+  ];
+}
+function default3() {
+  return [
+    {name:'面纸',gsm:200,flute:1.00,price:4200},
+    {name:'瓦纸',gsm:120,flute:1.35,price:3800},
+    {name:'里纸',gsm:200,flute:1.00,price:4200}
+  ];
+}
+
+function resetLayers() { layers=default7(); saveLayers(); renderLayers(); calc(); }
+function addLayer() { layers.push({name:`第${layers.length+1}层`,gsm:100,flute:1.0,price:3800}); renderLayers(); calc(); }
+function removeLayer() { if(layers.length>1){layers.pop(); renderLayers(); calc();} }
+
+function renderLayers() {
+  const tb=document.getElementById('layerTbody'); tb.innerHTML='';
+  layers.forEach((l,i)=>{
+    tb.innerHTML+=`<tr>
+      <td>${i+1}</td>
+      <td><input class="t" style="width:90px" value="${l.name}" onchange="layers[${i}].name=this.value;saveLayers()"></td>
+      <td><input class="t" type="number" style="width:70px" value="${l.gsm}" onchange="layers[${i}].gsm=parseFloat(this.value)||0;saveLayers();calc()"></td>
+      <td><input class="t" type="number" step="0.01" style="width:65px" value="${l.flute}" onchange="layers[${i}].flute=parseFloat(this.value)||0;saveLayers();calc()"></td>
+      <td><input class="t" type="number" style="width:80px" value="${l.price}" onchange="layers[${i}].price=parseFloat(this.value)||0;saveLayers();calc()"></td>
+      <td id="gsm${i}">-</td><td id="ppu${i}">-</td>
+      <td><button class="small danger" onclick="delOneLayer(${i})">删</button></td>
+    </tr>`;
+  });
+}
+function delOneLayer(i){ layers.splice(i,1); renderLayers(); calc(); }
+
+function renderOpts() {
+  const g=document.getElementById('optGrid'); g.innerHTML='';
+  opts.forEach((o,i)=>{
+    g.innerHTML+=`<div class="opt-item">
+      <input type="checkbox" ${o.on?'checked':''} onchange="opts[${i}].on=this.checked;saveOpts();calc()">
+      <span>${o.name}</span>
+      <input class="t" type="number" step="0.01" value="${o.price}" onchange="opts[${i}].price=parseFloat(this.value)||0;saveOpts();calc()">
+      <small>元/㎡</small>
+    </div>`;
+  });
+}
+
+// ===== 核心核算 =====
+function calc() {
+  const get=id=>parseFloat(document.getElementById(id).value)||0;
+  const L=get('boxL'), W=get('boxW'), H=get('boxH');
+  const trim=get('trim')/100, joint=get('joint'), lap=get('lap');
+
+  // ★ 面积公式：[(长+宽)×2 + 接头] × [(宽+高) + 搭接] ÷ 10⁶
+  const sumLW = L + W;
+  const sumWH = W + H;
+  const area = (sumLW * 2 + joint) * (sumWH + lap) / 1e6;
+  const trimArea = area * (1 + trim);
+
+  // 各层
+  let totalGsm=0, totalPricePerM2=0;
+  layers.forEach((l,i)=>{
+    const layerGsm = l.gsm * l.flute;
+    const ppu = layerGsm/1000 * (l.price/1000);
+    totalGsm += layerGsm;
+    totalPricePerM2 += ppu;
+    document.getElementById('gsm'+i).textContent=layerGsm.toFixed(1);
+    document.getElementById('ppu'+i).textContent=ppu.toFixed(3);
+  });
+
+  const paperPrice = trimArea * totalPricePerM2;
+  const boxWeight = trimArea * totalGsm;
+
+  // 加工费（按面积）
+  let processFeePerM2 = 0;
+  opts.forEach(o=>{ if(o.on) processFeePerM2 += o.price; });
+  const processFee = processFeePerM2 * trimArea;
+
+  // 报价
+  const otherFee = get('otherFee');
+  const cost = paperPrice + processFee + otherFee;
+  const profitRate = get('profitRate')/100;
+  const taxRate = get('taxRate')/100;
+  let quote = cost / (1 - profitRate);
+  quote = quote * (1 + taxRate);
+
+  // 输出
+  document.getElementById('outArea').textContent=area.toFixed(4);
+  document.getElementById('outTrim').textContent=trimArea.toFixed(4);
+  document.getElementById('outGsm').textContent=totalGsm.toFixed(0);
+  document.getElementById('outPrice').textContent=totalPricePerM2.toFixed(3);
+  document.getElementById('outPaperPrice').textContent=paperPrice.toFixed(3);
+  document.getElementById('outWeight').textContent=boxWeight.toFixed(0);
+  document.getElementById('outProcessFee').textContent=processFeePerM2.toFixed(3);
+  document.getElementById('outProcessFeeBox').textContent=processFee.toFixed(3);
+
+  document.getElementById('rPaper').textContent='¥'+paperPrice.toFixed(3);
+  document.getElementById('rProcess').textContent='¥'+processFee.toFixed(3);
+  document.getElementById('rCost').textContent='¥'+cost.toFixed(3);
+  document.getElementById('rQuote').textContent='¥'+quote.toFixed(3);
+
+  saveCfg();
+}
+
+// ===== 模板 =====
+function loadTpl(t) {
+  if(t==='7') layers=default7();
+  if(t==='5') layers=default5();
+  if(t==='3') layers=default3();
+  saveLayers(); renderLayers(); calc();
+}
+function saveTpl() {
+  const name=prompt('给这套配置起个名字：');
+  if(!name) return;
+  const tpls=JSON.parse(localStorage.getItem('quoteTpls')||'{}');
+  tpls[name]=JSON.parse(JSON.stringify(layers));
+  localStorage.setItem('quoteTpls',JSON.stringify(tpls));
+  alert('配方 "'+name+'" 已保存！');
+}
+
+// ===== 报价存档 =====
+function saveQuote() {
+  const name=document.getElementById('quoteName').value||('报价_'+new Date().toLocaleString());
+  const q={
+    name,date: new Date().toISOString(),
+    area:document.getElementById('outArea').textContent,
+    trimArea:document.getElementById('outTrim').textContent,
+    gsm:document.getElementById('outGsm').textContent,
+    paperPrice:document.getElementById('outPaperPrice').textContent,
+    weight:document.getElementById('outWeight').textContent,
+    processFee:document.getElementById('outProcessFeeBox').textContent,
+    quote:document.getElementById('rQuote').textContent,
+    cost:document.getElementById('rCost').textContent
+  };
+  quotes=JSON.parse(localStorage.getItem('quotes')||'[]');
+  quotes.unshift(q);
+  localStorage.setItem('quotes',JSON.stringify(quotes));
+  document.getElementById('quoteName').value='';
+  renderQuotes();
+  alert('报价单 "'+name+'" 已保存！');
+}
+function renderQuotes() {
+  quotes=JSON.parse(localStorage.getItem('quotes')||'[]');
+  const el=document.getElementById('quoteList');
+  if(quotes.length===0){ el.innerHTML='<p style="color:#bbb;text-align:center;padding:12px">暂无历史报价</p>'; return; }
+  el.innerHTML='';
+  quotes.slice(0,20).forEach((q,i)=>{
+    el.innerHTML+=`<div style="background:#f8f9fa;border-radius:6px;padding:8px 12px;margin-bottom:6px;font-size:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+      <div><strong>${q.name}</strong> · ${new Date(q.date).toLocaleString()} · 面积${q.area}㎡</div>
+      <div><strong style="color:#e74c3c">报价 ${q.quote} 元</strong> <button class="small danger" onclick="delQuote(${i})">删</button></div>
+    </div>`;
+  });
+}
+function delQuote(i){ if(confirm('删除此报价？')){ quotes.splice(i,1); localStorage.setItem('quotes',JSON.stringify(quotes)); renderQuotes();} }
+
+function exportQuote() {
+  const txt=`===== 纸箱报价单 =====\n时间: ${new Date().toLocaleString()}\n纸箱面积: ${document.getElementById('outArea').textContent} m²\n修边面积: ${document.getElementById('outTrim').textContent} m²\n平方纸重: ${document.getElementById('outGsm').textContent} g/m²\n平方纸价: ${document.getElementById('outPrice').textContent} 元/m²\n纸箱纸价: ${document.getElementById('outPaperPrice').textContent} 元/个\n纸箱箱重: ${document.getElementById('outWeight').textContent} g\n加工费单价: ${document.getElementById('outProcessFee').textContent} 元/㎡\n单箱加工费: ${document.getElementById('outProcessFeeBox').textContent} 元/个\n单箱成本: ${document.getElementById('rCost').textContent}\n建议报价: ${document.getElementById('rQuote').textContent}\n------------------\n各层:`+layers.map((l,i)=>`\n  ${i+1}层 ${l.name}: ${l.gsm}g ×${l.flute} @${l.price}元/吨`).join('')+`\n加工工序:`+opts.filter(o=>o.on).map(o=>` ${o.name}(${o.price}元/㎡)`).join(',')+`\n=========================`;
+  navigator.clipboard.writeText(txt).then(()=>alert('已复制到剪贴板！')).catch(()=>{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('已复制！');});
+}
+
+function clearAll(){ if(confirm('清空所有数据？不可恢复！')){ localStorage.clear(); location.reload();} }
+
+function saveLayers(){ localStorage.setItem('quoteLayers',JSON.stringify(layers)); }
+function loadLayers(){ const s=localStorage.getItem('quoteLayers'); if(s) layers=JSON.parse(s); }
+function saveOpts(){ localStorage.setItem('quoteOpts',JSON.stringify(opts)); }
+function saveCfg(){
+  localStorage.setItem('quoteCfg',JSON.stringify({
+    boxType:document.getElementById('boxType').value,
+    boxL:document.getElementById('boxL').value,boxW:document.getElementById('boxW').value,boxH:document.getElementById('boxH').value,
+    doorW:document.getElementById('doorW').value,cutN:document.getElementById('cutN').value,trim:document.getElementById('trim').value,
+    joint:document.getElementById('joint').value,lap:document.getElementById('lap').value,
+    profitRate:document.getElementById('profitRate').value,taxRate:document.getElementById('taxRate').value,otherFee:document.getElementById('otherFee').value
+  }));
+}
+
+init();
+</script>
+</body>
+</html>
